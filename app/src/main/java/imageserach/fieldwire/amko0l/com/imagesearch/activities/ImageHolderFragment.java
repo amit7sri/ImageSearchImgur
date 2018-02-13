@@ -1,5 +1,6 @@
 package imageserach.fieldwire.amko0l.com.imagesearch.activities;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -17,7 +18,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.NetworkError;
@@ -39,6 +39,7 @@ import imageserach.fieldwire.amko0l.com.imagesearch.adapter.MyImageHoldingRecycl
 import imageserach.fieldwire.amko0l.com.imagesearch.utils.ConnectivityUtils;
 import imageserach.fieldwire.amko0l.com.imagesearch.utils.Utils;
 import imageserach.fieldwire.amko0l.com.imagesearch.utils.VolleySingleton;
+import imageserach.fieldwire.amko0l.com.imagesearch.listeners.EndlessRecyclerViewScrollListener;
 
 import static imageserach.fieldwire.amko0l.com.imagesearch.utils.AppConstants.ARG_COLUMN_COUNT;
 import static imageserach.fieldwire.amko0l.com.imagesearch.utils.AppConstants.SEARCH_STRING;
@@ -56,7 +57,8 @@ public class ImageHolderFragment extends Fragment {
     private MyImageHoldingRecyclerViewAdapter myImageHoldingRecyclerViewAdapter;
     private TextView emptyTextView;
     private List<String> imageList;
-
+    private int offset = 1;
+    private EndlessRecyclerViewScrollListener scrollListener;
 
     public ImageHolderFragment() {
     }
@@ -118,9 +120,21 @@ public class ImageHolderFragment extends Fragment {
             Context context = view.getContext();
             recyclerView = view.findViewById(R.id.recyclerView);
             myImageHoldingRecyclerViewAdapter = new MyImageHoldingRecyclerViewAdapter(imageList, mListener, getActivity());
-            recyclerView.setLayoutManager(new GridLayoutManager(context, mColumnCount));
+            GridLayoutManager gridLayoutManager = new GridLayoutManager(context, mColumnCount);
+            recyclerView.setLayoutManager(gridLayoutManager);
             recyclerView.setAdapter(myImageHoldingRecyclerViewAdapter);
+            scrollListener = new EndlessRecyclerViewScrollListener(gridLayoutManager) {
+                @Override
+                public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
+                    // Triggered only when new data needs to be appended to the list
+                    // Add whatever code is needed to append new items to the bottom of the list
+                    loadNextDataFromApi();
+                }
+            };
+            // Adds the scroll listener to RecyclerView
+            recyclerView.addOnScrollListener(scrollListener);
         }
+        Log.d(TAG,"on create view called  " +offset);
         volleyRequest(getUri(), 0);
         return view;
     }
@@ -145,6 +159,7 @@ public class ImageHolderFragment extends Fragment {
 
     //Volley request for json string
     public void volleyRequest(String volleysearchString, final int addFlag) {
+        Log.d(TAG, "volley request");
         StringRequest stringRequest = new StringRequest(Request.Method.GET, volleysearchString,
                 new Response.Listener<String>() {
                     @Override
@@ -157,20 +172,21 @@ public class ImageHolderFragment extends Fragment {
             public void onErrorResponse(VolleyError error) {
                 loadingIndicator.setVisibility(View.GONE);
                 emptyTextView.setVisibility(View.VISIBLE);
-
-                String message = null;
-                if (error instanceof NetworkError) {
-                    message = getResources().getString(R.string.connection_error);
-                } else if (error instanceof ServerError) {
-                    message = getResources().getString(R.string.server_error);
-                } else if (error instanceof AuthFailureError) {
-                    message = getResources().getString(R.string.connection_error);
-                } else if (error instanceof ParseError) {
-                    message = getResources().getString(R.string.parse_error);
-                } else if (error instanceof TimeoutError) {
-                    message = getResources().getString(R.string.timeout_error);
+                Activity activity = getActivity();
+                String message = "Error";
+                if(activity!=null) {
+                    if (error instanceof NetworkError) {
+                        message = getResources().getString(R.string.connection_error);
+                    } else if (error instanceof ServerError) {
+                        message = getResources().getString(R.string.server_error);
+                    } else if (error instanceof AuthFailureError) {
+                        message = getResources().getString(R.string.connection_error);
+                    } else if (error instanceof ParseError) {
+                        message = getResources().getString(R.string.parse_error);
+                    } else if (error instanceof TimeoutError) {
+                        message = getResources().getString(R.string.timeout_error);
+                    }
                 }
-
                 emptyTextView.setText(message);
             }
         }) {
@@ -215,8 +231,17 @@ public class ImageHolderFragment extends Fragment {
         return Utils.getUri(getSearchString()).toString();
     }
 
-    public void loadNextDataFromApi(int offset) {
-        Uri.Builder uriBuilder = Utils.getUri(getSearchString());
+    public void loadNextDataFromApi() {
+        loadingIndicator.setVisibility(View.VISIBLE);
+        offset++;
+        // 1. First, clear the array of data
+        //imageList.clear();
+        // 2. Notify the adapter of the update
+        //myImageHoldingRecyclerViewAdapter.notifyDataSetChanged(); // or notifyItemRangeRemoved
+        // 3. Reset endless scroll listener when performing a new search
+        //scrollListener.resetState();
+        Log.d(TAG, "loadNextDataFromApi  " +offset);
+        Uri.Builder uriBuilder = Utils.getUri(getSearchString(), offset);
         uriBuilder.appendQueryParameter("start", "" + offset);
         volleyRequest(uriBuilder.toString(), 1);
     }

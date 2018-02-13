@@ -26,16 +26,25 @@ public final class Utils {
 
     //make URL from base url and userText
     public static Uri.Builder getUri(String query) {
-        Uri baseuri = Uri.parse(BASEURL);
+        Uri baseuri = Uri.parse(BASEURL+1);
         Uri.Builder uriBuilder = baseuri.buildUpon();
         uriBuilder.appendQueryParameter("q", query);
         Log.d(TAG,"context is " +context);
-        if(ConnectivityUtils.isConnectedWifi(context) || ConnectivityUtils.isConnectedFast(context)){
-            uriBuilder.appendQueryParameter("q_size_px", "small | med | big | lrg | huge");
-        }else{
+        if(!ConnectivityUtils.isConnectedWifi(context) || !ConnectivityUtils.isConnectedFast(context)){
             uriBuilder.appendQueryParameter("q_size_px", "small");
         }
+        return uriBuilder;
+    }
 
+    public static Uri.Builder getUri(String query, int offset) {
+        Uri baseuri = Uri.parse(BASEURL+offset);
+        Uri.Builder uriBuilder = baseuri.buildUpon();
+        uriBuilder.appendQueryParameter("q", query);
+        Log.d(TAG,"context is " +context);
+        if(!ConnectivityUtils.isConnectedWifi(context) || !ConnectivityUtils.isConnectedFast(context)){
+            uriBuilder.appendQueryParameter("q_size_px", "small");
+        }
+        Log.d(TAG, "get Uri offset called " + uriBuilder);
         return uriBuilder;
     }
 
@@ -52,7 +61,7 @@ public final class Utils {
             JSONArray itemsArray = baseJsonResponse.getJSONArray("data");
             if (itemsArray != null) {
 
-                Log.d(TAG, "images is " + itemsArray.length());
+                //Log.d(TAG, "images is " + itemsArray.length());
                 for (int i = 0; i < itemsArray.length(); i++) {
 
                     JSONObject itemsArrayJSONObject = itemsArray.getJSONObject(i);
@@ -62,7 +71,7 @@ public final class Utils {
 
                     JSONObject imagesJSONObject = null;
                     if (imagesJSONArray != null) {
-                        Log.d(TAG, "images is " + imagesJSONArray.length());
+                        //Log.d(TAG, "images is " + imagesJSONArray.length());
                         imagesJSONObject = imagesJSONArray.getJSONObject(0);
                     }
 

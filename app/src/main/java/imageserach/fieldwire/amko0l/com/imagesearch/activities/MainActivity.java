@@ -24,6 +24,7 @@ import java.util.Set;
 
 import imageserach.fieldwire.amko0l.com.imagesearch.adapter.MyItemRecyclerViewAdapter;
 import imageserach.fieldwire.amko0l.com.imagesearch.R;
+import imageserach.fieldwire.amko0l.com.imagesearch.listeners.DebouncedQueryTextListener;
 import imageserach.fieldwire.amko0l.com.imagesearch.utils.FragmentManagerUtil;
 import imageserach.fieldwire.amko0l.com.imagesearch.utils.Utils;
 
@@ -66,20 +67,10 @@ public class MainActivity extends AppCompatActivity implements
         SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
         SearchView searchView = (SearchView) menu.findItem(R.id.menu_search).getActionView();
 
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                if (!TextUtils.isEmpty(newText)) {
-                    getSupportFragmentManager().popBackStack();
-                    imageHolderFragmentCreation(newText);
-                }
-                return true;
-            }
-
+        searchView.setOnQueryTextListener(new DebouncedQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 Log.d(TAG, " onQueryTextSubmit  " + query);
-
                 Set<String> set = sharedPref.getStringSet(searchHistory, new LinkedHashSet<String>());
                 Set<String> newSet = new LinkedHashSet<>();
                 newSet.addAll(set);
@@ -88,9 +79,20 @@ public class MainActivity extends AppCompatActivity implements
                 editor = getSharedPreferences(prefName, MODE_PRIVATE).edit();
                 editor.putStringSet(searchHistory, newSet);
                 editor.apply();
+                imageHolderFragmentCreation(query);
 
                 return true;
             }
+
+            @Override
+            public void onQueryDebounce(String text) {
+                Log.d(TAG, "debounce onQueryDebounce  " + text);
+                if (!TextUtils.isEmpty(text)) {
+                    getSupportFragmentManager().popBackStack();
+                    imageHolderFragmentCreation(text);
+                }
+            }
+
         });
 
         // Set current activity as searchable activity
